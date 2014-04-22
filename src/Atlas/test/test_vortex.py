@@ -41,7 +41,7 @@ class Test_VortexRing(unittest.TestCase):
         comp.run()
 
         # check outputs
-        assert relative_err(comp.vi, data['vi']) < 1e-7
+        self.assertAlmostEqual(comp.vi.all(), data['vi'].all(), 7)
 
         for i, val in enumerate(data['vi']):
             self.assertAlmostEquals(comp.vi[i], val, 4,

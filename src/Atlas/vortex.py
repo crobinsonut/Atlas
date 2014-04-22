@@ -30,6 +30,7 @@ class VortexRing(Component):
     vz       = Array(iotype='out', desc='')
     vr       = Array(iotype='out', desc='')
 
+    #@profile
     def execute(self):
         dy = np.zeros((self.Ns, 1))
         yE = np.zeros((self.Ns, 1))
@@ -88,33 +89,30 @@ class VortexRing(Component):
                 self.vz = np.zeros((Nw+1, self.Ns+1))
                 self.vr = np.zeros((Nw+1, self.Ns+1))
                 for i in range(t):                       # for each disk
-                    for s in range(self.Ns+1):           # and for each ring on each disk
-                        for ii in range(t):              # add the velocity induced from each disk
-                            for ss in range(1, self.Ns+1):  # and each ring on each disk (inner ring cancels itself out)
-                                zr = self.z[ii, ss]
-                                r  = self.r[ii, ss]
-                                zp = self.z[i, s]
-                                yp = self.r[i, s]
-                                M  = self.Gamma[ii, ss] * r * dtheta / (2*pi)
-                                X2 = (-r*sin(self.thetaArray))**2
-                                Y2 = (yp - r*cos(self.thetaArray))**2
-                                Z2 = (zp - zr)**2
-                                Normal = sqrt(X2 + Y2 + Z2)
-                                for iii in range(max(self.thetaArray.shape)):
-                                    if Normal[iii] < cr:
-                                        Normal[iii] = cr
-                                Norm3 = Normal**3
-                                self.vr[i, s] = self.vr[i, s] + np.sum(-cos(self.thetaArray) * (zp - zr) / Norm3) * M
-                                self.vz[i, s] = self.vz[i, s] + np.sum((cos(self.thetaArray) * yp - r) / Norm3) * M
-                                zr = -2*self.h - self.z[ii, ss]
-                                Z2 = (zp - zr)**2
-                                Normal = sqrt(X2 + Y2 + Z2)
-                                for iii in range(max(self.thetaArray.shape)):
-                                    if Normal[iii] < cr:
-                                        Normal[iii] = cr
-                                Norm3 = Normal**3
-                                self.vr[i, s] = self.vr[i, s] - np.sum(-cos(self.thetaArray) * (zp - zr) / Norm3) * M
-                                self.vz[i, s] = self.vz[i, s] - np.sum((cos(self.thetaArray) * yp - r) / Norm3) * M
+                    for s in range(self.Ns+1):           # and for each ring on each dis
+			zp = self.z[i, s]
+			yp = self.r[i, s]
+
+			zr = self.z[:t, 1:self.Ns+1]
+			r  = self.r[:t, 1:self.Ns+1]
+			M = self.Gamma[:t, 1:self.Ns+1] * r * dtheta / (2*pi)
+
+			X2 = np.outer(-r, sin(self.thetaArray))**2
+			Y2 = (yp - np.outer(r, cos(self.thetaArray)))**2
+			Z2 = (zp - zr)**2
+
+			Normal = sqrt(X2 + Y2 + Z2.reshape(-1, 1))
+			Normal[Normal < cr] = cr
+                        Norm3 = Normal**3
+			self.vr[:t, 1:self.Ns+1] += np.sum(np.outer(zp - zr, -cos(self.thetaArray)) / Norm3, axis=1).reshape((-1, 10)) * M
+			self.vz[:t, 1:self.Ns+1] += np.sum(np.outer(yp - r, cos(self.thetaArray)) / Norm3, axis=1).reshape((-1, 10)) * M
+			zr = -2*self.h - self.z[:t, 1:self.Ns+1]
+			Z2 = (zp - zr)**2
+			Normal = sqrt(X2 + Y2 + Z2.reshape(-1, 1))
+			Normal[Normal < cr] = cr
+                        Norm3 = Normal**3
+			self.vr[:t, 1:self.Ns+1] += - np.sum(np.outer(zp - zr, -cos(self.thetaArray)) / Norm3, axis=1).reshape((-1, 10)) * M
+			self.vz[:t, 1:self.Ns+1] += - np.sum(np.outer(yp - r, cos(self.thetaArray)) / Norm3, axis=1).reshape((-1, 10)) * M
 
                 # Compute altitude and time power approximation
                 # if tt == 0:

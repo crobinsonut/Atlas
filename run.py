@@ -1,11 +1,17 @@
 from Atlas import AeroStructural
 from openmdao.lib.drivers.api import SLSQPdriver
 
+import time
+
 top = AeroStructural()
 
 #top.add('driver', SLSQPdriver())
 
+start = time.time()
 top.run()
+end = time.time()
+
+print "Exectution time: {}".format(end - start)
 
 #============= Objective ================
 
